@@ -13,9 +13,11 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 {
     public class ReleaseStrain : StrainDecaySkill
     {
-        private const double ln_decay_base = 0.016;
+        private const double ln_decay_base = 0.24;//0.33;
         private const double overall_decay_base = 0.30;
-        private double noodleBuff = 20.0;
+
+        private double noodleBuff = 1.63;
+        private double riceBuff = 0.21;
 
         private readonly double[] lnStrains;
 
@@ -25,9 +27,9 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
         private double lnStrain;
         private double overallStrain;
 
-        protected override double SkillMultiplier => 1.0;
+        protected override double SkillMultiplier => 1;
 
-        protected override double StrainDecayBase => 1.0;
+        protected override double StrainDecayBase => 1;
 
         public ReleaseStrain(Mod[] mods, int totalColumns)
             : base(mods)
@@ -35,6 +37,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             lnStrains = new double[totalColumns];
             lnBuffNoteCache = new ManiaDifficultyHitObject[totalColumns];
             overallStrain = 1;
+
             keymode = totalColumns;
         }
 
@@ -43,7 +46,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             var maniaCurrent = (ManiaDifficultyHitObject)current;
             int column = maniaCurrent.BaseObject.Column;
 
-            lnStrain = noodleBuff * coolFunction(maniaCurrent);
+            lnStrain = (isLN(maniaCurrent) ? noodleBuff : riceBuff) * coolFunction(maniaCurrent);
 
             // Decay and increase lnStrain
             lnStrains[column] = applyDecay(lnStrain, current.DeltaTime, ln_decay_base);
@@ -53,13 +56,21 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             // Decay and increase overallStrain
             overallStrain = applyDecay(overallStrain, current.DeltaTime, overall_decay_base);
-            overallStrain += lnStrain + (maniaCurrent.BaseObject is HoldNote ? 1 : 0);
+            overallStrain += lnStrain * (isLN(maniaCurrent) ? 2 : 1);
 
             // By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
             return lnStrain + overallStrain - CurrentStrain;
         }
 
+        private bool isLN(DifficultyHitObject current)
+        {
+            var cc = (ManiaDifficultyHitObject)current;
+
+            return cc.BaseObject is HoldNote;
+        }
+
         protected override double CalculateInitialStrain(double offset, DifficultyHitObject current)
+            //=> isLN(current) ? applyDecay(lnStrain, offset - current.Previous(0).StartTime, ln_decay_base) : 0;
             => applyDecay(lnStrain, offset - current.Previous(0).StartTime, ln_decay_base);
 
         private double applyDecay(double value, double deltaTime, double decayBase)
@@ -84,10 +95,10 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
                 if (note == null) continue;
 
-                if (note.BaseObject is HoldNote && Precision.DefinitelyBigger(note.EndTime, obj.StartTime))
-                {
-                    concurrentNotes++;
+                concurrentNotes++;
 
+                if (isLN(note) && Precision.DefinitelyBigger(note.EndTime, obj.StartTime, 24))
+                {
                     double noteHand = getHand(note.BaseObject.Column);
 
                     if (noteHand == hand || noteHand == 0.5)
@@ -100,8 +111,8 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
                 }
             }
 
-            double averageDistance = totalDistance / Math.Max(1.0, concurrentNotesOnSameHand);
-            return (noodleBuff * averageDistance) / Math.Max(1, concurrentNotes) + bonus;
+            double averageDistance = Math.Min(noodleBuff, totalDistance / Math.Max(1.0, concurrentNotesOnSameHand));
+            return (noodleBuff * averageDistance) / Math.Max(1.0, concurrentNotes) + bonus;
         }
 
 
