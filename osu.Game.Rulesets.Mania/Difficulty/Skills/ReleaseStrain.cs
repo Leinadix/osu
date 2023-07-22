@@ -13,11 +13,12 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 {
     public class ReleaseStrain : StrainDecaySkill
     {
-        private const double ln_decay_base = 0.24;//0.33;
+        private const double ln_decay_base = 0.24;
         private const double overall_decay_base = 0.30;
 
-        private double noodleBuff = 1.63;
-        private double riceBuff = 0.21;
+        private double noodleBuff = 1.40;
+        private double rollTreshhold = 0.1;
+        private double keymodeScaling = 4.5;
 
         private readonly double[] lnStrains;
 
@@ -46,7 +47,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             var maniaCurrent = (ManiaDifficultyHitObject)current;
             int column = maniaCurrent.BaseObject.Column;
 
-            lnStrain = (isLN(maniaCurrent) ? noodleBuff : riceBuff) * coolFunction(maniaCurrent);
+            lnStrain = noodleBuff * coolFunction(maniaCurrent);
 
             // Decay and increase lnStrain
             lnStrains[column] = applyDecay(lnStrain, current.DeltaTime, ln_decay_base);
@@ -56,7 +57,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             // Decay and increase overallStrain
             overallStrain = applyDecay(overallStrain, current.DeltaTime, overall_decay_base);
-            overallStrain += lnStrain * (isLN(maniaCurrent) ? 2 : 1);
+            overallStrain += lnStrain * (isLN(maniaCurrent) ? 1 : 0);
 
             // By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
             return lnStrain + overallStrain - CurrentStrain;
@@ -97,11 +98,13 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
                 concurrentNotes++;
 
-                if (isLN(note) && Precision.DefinitelyBigger(note.EndTime, obj.StartTime, 24))
+                if (isLN(note) && Precision.DefinitelyBigger(note.EndTime, obj.StartTime, 1) &&
+                                    Precision.DefinitelyBigger(obj.EndTime, note.EndTime, 1) &&
+                                    Precision.DefinitelyBigger(obj.StartTime, note.StartTime, 1))
                 {
                     double noteHand = getHand(note.BaseObject.Column);
 
-                    if (noteHand == hand || noteHand == 0.5)
+                    if (noteHand == hand || noteHand == 0.5 || hand == 0.5)
                     {
                         concurrentNotesOnSameHand++;
                         totalDistance += Math.Abs(obj.BaseObject.Column - note.BaseObject.Column);
@@ -111,8 +114,11 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
                 }
             }
 
-            double averageDistance = Math.Min(noodleBuff, totalDistance / Math.Max(1.0, concurrentNotesOnSameHand));
-            return (noodleBuff * averageDistance) / Math.Max(1.0, concurrentNotes) + bonus;
+
+            // See https://www.desmos.com/calculator/wkvpncjv5z
+            double averageDistance = (totalDistance / Math.Max(1.0, concurrentNotesOnSameHand));
+
+            return (Math.Max(0, keymodeScaling / (1 + (1 / Math.Max(0, averageDistance - rollTreshhold)))) / Math.Max(1.0, concurrentNotes)) + bonus;
         }
 
 
