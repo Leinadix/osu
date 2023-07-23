@@ -61,13 +61,10 @@ namespace osu.Game.Rulesets.Mania.Difficulty
 
             double noodleDifficulty = skills[1].DifficultyValue() * star_scaling_factor;
 
-            double onionFactor = Math.Max(1, Math.Min(noodleDifficulty, riceDifficulty) / Math.Max(1, Math.Max(noodleDifficulty, riceDifficulty)));
-
-            double ramenScale = Math.Max(noodleDifficulty, riceDifficulty) + onionFactor * Math.Min(noodleDifficulty, riceDifficulty);
-
             ManiaDifficultyAttributes attributes = new ManiaDifficultyAttributes
             {
-                StarRating = ramenScale,
+                StarRating = Math.Pow(Math.Pow(riceDifficulty, 1.5)
+                                    + Math.Pow(noodleDifficulty, 1.5), 1 / 1.5),
                 Mods = mods,
                 // In osu-stable mania, rate-adjustment mods don't affect the hit window.
                 // This is done the way it is to introduce fractional differences in order to match osu-stable for the time being.

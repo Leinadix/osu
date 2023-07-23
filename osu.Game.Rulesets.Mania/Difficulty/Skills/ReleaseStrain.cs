@@ -13,12 +13,12 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 {
     public class ReleaseStrain : StrainDecaySkill
     {
-        private const double ln_decay_base = 0.24;
+        private const double ln_decay_base = 0.125;
         private const double overall_decay_base = 0.30;
 
-        private double noodleBuff = 1.40;
-        private double rollTreshhold = 0.1;
-        private double keymodeScaling = 4.5;
+        private double noodleBuff = 4.50;
+        private double rollTreshhold = 0.027;
+        private double keymodeScaling = 3.5;
 
         private readonly double[] lnStrains;
 
@@ -80,7 +80,6 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
         private double coolFunction(ManiaDifficultyHitObject obj)
         {
             double hand = getHand(obj.BaseObject.Column);
-            double bonus = 0.0;
 
             int totalDistance = 0;
 
@@ -109,8 +108,6 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
                         concurrentNotesOnSameHand++;
                         totalDistance += Math.Abs(obj.BaseObject.Column - note.BaseObject.Column);
                     }
-
-                    //bonus = coolFunction(note) - lnBuffResults[i];
                 }
             }
 
@@ -118,7 +115,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             // See https://www.desmos.com/calculator/wkvpncjv5z
             double averageDistance = (totalDistance / Math.Max(1.0, concurrentNotesOnSameHand));
 
-            return (Math.Max(0, keymodeScaling / (1 + (1 / Math.Max(0, averageDistance - rollTreshhold)))) / Math.Max(1.0, concurrentNotes)) + bonus;
+            return (Math.Max(0, keymodeScaling / (1 + (1 / Math.Max(0, averageDistance - rollTreshhold)))) / Math.Max(1.0, concurrentNotes));
         }
 
 
