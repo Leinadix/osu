@@ -23,6 +23,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
         private double individualStrain;
         private double overallStrain;
+        private int chordCount = 1;
 
         public Strain(Mod[] mods, int totalColumns)
             : base(mods)
@@ -44,12 +45,16 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             individualStrains[column] = applyDecay(individualStrains[column], startTime - startTimes[column], individual_decay_base);
             individualStrains[column] += 2.0;
 
+            if (maniaCurrent.DeltaTime > 1) chordCount = 1;
+
             // For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
             individualStrain = maniaCurrent.DeltaTime <= 1 ? Math.Max(individualStrain, individualStrains[column]) : individualStrains[column];
 
             // Decay and increase overallStrain
-            overallStrain = applyDecay(overallStrain, current.DeltaTime, overall_decay_base);
+            overallStrain = applyDecay(overallStrain * Math.Max(((Math.Log(10 - chordCount) / 100) + (1 / 1.01)), 0.1), current.DeltaTime, overall_decay_base);
             overallStrain += 1;
+
+            chordCount++;
 
             // Update startTimes and endTimes arrays
             startTimes[column] = startTime;
