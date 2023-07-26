@@ -25,7 +25,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
         private double individualStrain;
         private double overallStrain;
-        private int chordCount = 1;
+        private double chordCount = 1.0;
         private int keyMode = 1;
 
         public Strain(Mod[] mods, int totalColumns)
@@ -61,19 +61,19 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             prevStartTime = prevStartTime < startTime ? prevStartTime : startTime;
 
             double chordDelta = (maniaCurrent.StartTime - prevStartTime);
-            double deltaTimeIgnoreReleases = (maniaCurrent.Previous(0) == null) ? 1 : (maniaCurrent.StartTime - maniaCurrent.Previous(0).StartTime);
 
-            if (deltaTimeIgnoreReleases > 1) chordCount = 1;
+            if (current.DeltaTime > 40) chordCount = 1;
+            chordCount = Math.Min(Math.Max(chordCount + Math.Max(Math.Min(1, 2 - (current.DeltaTime / 16)), -1), 1), keyMode);
 
             // Decay and increase individualStrains in own column
-            individualStrains[column] = applyDecay(individualStrains[column], chordDelta /* / priority*/, individual_decay_base);
+            individualStrains[column] = applyDecay(individualStrains[column], Math.Pow(chordDelta, -(Math.Log(current.DeltaTime) / 52) + 1), individual_decay_base);
             individualStrains[column] += 2;
 
             // For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
-            individualStrain = deltaTimeIgnoreReleases <= 1 ? Math.Max(individualStrain, individualStrains[column]) : individualStrains[column];
+            individualStrain = current.DeltaTime <= 1 ? Math.Max(individualStrain, individualStrains[column]) : individualStrains[column];
 
             // Decay and increase overallStrain
-            overallStrain = applyDecay(overallStrain * Math.Max(((Math.Log(10 - chordCount) / 100) + (1 / 1.01)), 0.1), deltaTimeIgnoreReleases, overall_decay_base);
+            overallStrain = applyDecay(overallStrain * Math.Max(((Math.Log(10 - chordCount) / 200) + (1 / 1.00000479408615)), 0.1), current.DeltaTime, overall_decay_base);
             overallStrain += 1;
 
             chordCount++;
