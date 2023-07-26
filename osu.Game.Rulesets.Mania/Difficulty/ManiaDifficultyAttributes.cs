@@ -18,6 +18,10 @@ namespace osu.Game.Rulesets.Mania.Difficulty
         /// </remarks>
         [JsonProperty("great_hit_window")]
         public double GreatHitWindow { get; set; }
+        [JsonProperty("rice_diffuculty")]
+        public double RiceDifficulty { get; set; }
+        [JsonProperty("noodle_diffuculty")]
+        public double NoodleDifficulty { get; set; }
 
         public override IEnumerable<(int attributeId, object value)> ToDatabaseAttributes()
         {
