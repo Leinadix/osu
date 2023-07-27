@@ -60,9 +60,9 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             prevStartTime = prevStartTime < startTime ? prevStartTime : startTime;
 
-            double chordDelta = (maniaCurrent.StartTime - prevStartTime);
+            double chordDelta = Math.Max(maniaCurrent.DeltaTime, maniaCurrent.StartTime - prevStartTime);
 
-            if (current.DeltaTime > 40) chordCount = 1;
+            if (current.DeltaTime > 40 || chordCount > 10) chordCount = 1;
 
 
             //Math.Max(Math.Min(1, 2 - (current.DeltaTime / 16)), -1), 1)
@@ -71,7 +71,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             //chordCount = Math.Min(1, Math.Max(chordCount + Math.Max(0, Math.Min(1, (1 - Math.Pow(Math.E, ((current.DeltaTime / 16)) - Math.PI)) / (1 - Math.Pow(Math.E, -Math.PI)))), keyMode));
 
-            priority = Math.Max(1, Math.Min(keyMode, priority + Math.Max(Math.Min(1, 2 - (current.DeltaTime / 16)), -1)));
+            priority = Math.Max(1, priority + (Math.Pow(((2 * Math.Tanh((maniaCurrent.DeltaTime - 40) / 12) + Math.Tanh((12 - maniaCurrent.DeltaTime) / 6) + 1) / 2) + 1, 2) - 2) / 2);
 
             // Decay and increase individualStrains in own column
             individualStrains[column] = applyDecay(individualStrains[column], Math.Pow(chordDelta, -(Math.Log(priority) / 52) + 1), individual_decay_base);
