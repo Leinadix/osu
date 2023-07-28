@@ -65,7 +65,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty
             ManiaDifficultyAttributes attributes = new ManiaDifficultyAttributes
             {
                 StarRating = Math.Pow(Math.Pow(riceDifficulty, 1.5)
-                                    + Math.Pow(noodleDifficulty, 1.5), 1 / 1.5),
+                                    + Math.Pow(0, 1.5), 1 / 1.5),
                 RiceDifficulty = riceDifficulty,
                 NoodleDifficulty = noodleDifficulty,
                 Mods = mods,
