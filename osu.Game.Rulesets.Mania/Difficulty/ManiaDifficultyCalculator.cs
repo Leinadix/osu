@@ -25,7 +25,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty
     public class ManiaDifficultyCalculator : DifficultyCalculator
     {
         //private const double star_scaling_factor = 0.0143;
-        private const double star_scaling_factor = 0.0125;
+        private const double star_scaling_factor = 0.01;
 
         private readonly bool isForCurrentRuleset;
         private readonly double originalOverallDifficulty;
@@ -65,7 +65,7 @@ namespace osu.Game.Rulesets.Mania.Difficulty
             ManiaDifficultyAttributes attributes = new ManiaDifficultyAttributes
             {
                 StarRating = Math.Pow(Math.Pow(riceDifficulty, 1.5)
-                                    + Math.Pow(0, 1.5), 1 / 1.5),
+                                    + Math.Pow(noodleDifficulty, 1.5), 1 / 1.5),
                 RiceDifficulty = riceDifficulty,
                 NoodleDifficulty = noodleDifficulty,
                 Mods = mods,

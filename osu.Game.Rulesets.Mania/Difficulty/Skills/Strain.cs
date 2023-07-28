@@ -26,7 +26,8 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
         private double individualStrain;
         private double overallStrain;
         private double chordCount = 1.0;
-        private int keyMode;
+        private int calcKeyMode = 1;
+        private int keymode = 1;
 
         public Strain(Mod[] mods, int totalColumns)
             : base(mods)
@@ -35,7 +36,9 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             endTimes = new double[totalColumns];
             individualStrains = new double[totalColumns];
             overallStrain = 1;
-            keyMode = totalColumns;
+
+            keymode = totalColumns;
+
         }
 
         protected override double StrainValueOf(DifficultyHitObject current)
@@ -44,6 +47,8 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             double startTime = maniaCurrent.StartTime;
             double endTime = maniaCurrent.EndTime;
             int column = maniaCurrent.BaseObject.Column;
+
+            calcKeyMode = Math.Max(calcKeyMode, 1 + Math.Abs(column - (maniaCurrent.Previous(0) == null ? column : ((ManiaDifficultyHitObject)(maniaCurrent.Previous(0))).BaseObject.Column)));
 
             double priority = 1;
 
@@ -62,22 +67,21 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             double chordDelta = Math.Max(maniaCurrent.DeltaTime, maniaCurrent.StartTime - prevStartTime);
 
-            if (current.DeltaTime > 40) chordCount = 1;
+            if (current.DeltaTime > 30) chordCount = 1;
+            chordCount++;
 
             priority = Math.Max(1, priority + (Math.Pow(((2 * Math.Tanh((maniaCurrent.DeltaTime - 40) / 12) + Math.Tanh((12 - maniaCurrent.DeltaTime) / 6) + 1) / 2) + 1, 2) - 2) / 2);
 
             // Decay and increase individualStrains in own column
-            individualStrains[column] = applyDecay(individualStrains[column], Math.Max(1, Math.Pow(chordDelta, -(Math.Log(priority) / 52) + 1)), individual_decay_base);
-            individualStrains[column] += 2;
+            individualStrains[column] = applyDecay(individualStrains[column], Math.Max(1, Math.Pow(chordDelta, -(Math.Log(priority + chordCount - 1) / 52) + 1)), individual_decay_base);
+            individualStrains[column] += calcKeyMode / chordCount;
 
             // For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
             individualStrain = current.DeltaTime <= 1 ? Math.Max(individualStrain, individualStrains[column]) : individualStrains[column];
 
             // Decay and increase overallStrain
-            overallStrain = Math.Max(0, applyDecay(overallStrain * Math.Max(((Math.Log(Math.Max(1, 10 - chordCount)) / 100) + (1 / 1.01)), 0.1), current.DeltaTime, overall_decay_base));
-            overallStrain += 1;
-
-            chordCount++;
+            overallStrain = Math.Max(0, applyDecay(overallStrain * Math.Max(((Math.Log(Math.Max(1, 10 - chordCount)) / 100) + (1 / 1.0065)), 0.1), current.DeltaTime, overall_decay_base));
+            overallStrain += (((1.5 - 1) * (Math.Tanh(4 - calcKeyMode) + 1) / 2) + 1);
 
             // Update startTimes and endTimes arrays
             startTimes[column] = startTime;
