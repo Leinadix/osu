@@ -48,40 +48,33 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
             double endTime = maniaCurrent.EndTime;
             int column = maniaCurrent.BaseObject.Column;
 
-            calcKeyMode = Math.Max(calcKeyMode, 1 + Math.Abs(column - (maniaCurrent.Previous(0) == null ? column : ((ManiaDifficultyHitObject)(maniaCurrent.Previous(0))).BaseObject.Column)));
-
-            double priority = 1;
-
-            double[] startTimesCopy = new HashSet<double>(startTimes).ToArray();
-            Array.Sort(startTimesCopy);
-            priority = Math.Max(1, priority + Array.IndexOf(startTimesCopy, startTimes[column]));
-
-            double prevStartTime = -1;
-
-            foreach (double d in startTimesCopy)
-            {
-                if (d > prevStartTime && d < startTime) prevStartTime = d;
-            }
-
-            prevStartTime = prevStartTime < startTime ? prevStartTime : startTime;
-
-            double chordDelta = Math.Max(maniaCurrent.DeltaTime, maniaCurrent.StartTime - prevStartTime);
+            double dist = 0.0;
 
             if (current.DeltaTime > 30) chordCount = 1;
             chordCount++;
 
-            priority = Math.Max(1, priority + (Math.Pow(((2 * Math.Tanh((maniaCurrent.DeltaTime - 40) / 12) + Math.Tanh((12 - maniaCurrent.DeltaTime) / 6) + 1) / 2) + 1, 2) - 2) / 2);
+            for (int i = 0; i < chordCount; i++) dist += distOf(current, i, column);
+
+            dist /= chordCount; // <-- if close to 1 we have a roll or chord, which are treated the same.
+
+            calcKeyMode = Math.Max(calcKeyMode, 1 + Math.Abs(column - (maniaCurrent.Previous(0) == null ? column : ((ManiaDifficultyHitObject)(maniaCurrent.Previous(0))).BaseObject.Column)));
+
+            double[] startTimesCopy = new HashSet<double>(startTimes).ToArray(); // Hashset to remove duplicates
+
+            double priority = calcNotePriority(current, startTimesCopy);
+
+            double chordDelta = calcChordDelta(startTimesCopy, maniaCurrent);
 
             // Decay and increase individualStrains in own column
             individualStrains[column] = applyDecay(individualStrains[column], Math.Max(1, Math.Pow(chordDelta, -(Math.Log(priority + chordCount - 1) / 52) + 1)), individual_decay_base);
-            individualStrains[column] += calcKeyMode / chordCount;
+            individualStrains[column] += Math.Max(0, calcKeyMode) / chordCount;
 
             // For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
             individualStrain = current.DeltaTime <= 1 ? Math.Max(individualStrain, individualStrains[column]) : individualStrains[column];
 
             // Decay and increase overallStrain
-            overallStrain = Math.Max(0, applyDecay(overallStrain * Math.Max(((Math.Log(Math.Max(1, 10 - chordCount)) / 100) + (1 / 1.0065)), 0.1), current.DeltaTime, overall_decay_base));
-            overallStrain += (((1.5 - 1) * (Math.Tanh(4 - calcKeyMode) + 1) / 2) + 1);
+            overallStrain = Math.Max(0, applyDecay(overallStrain * Math.Max(((Math.Log(Math.Max(0.1, 10 - chordCount)) / 100) + (1 / 1.0085)), 0.1), current.DeltaTime, overall_decay_base));
+            overallStrain += (((1.5 - 1) * (Math.Tanh(4 - Math.Max(0, calcKeyMode)) + 1) / 2) + 1);
 
             // Update startTimes and endTimes arrays
             startTimes[column] = startTime;
@@ -89,6 +82,35 @@ namespace osu.Game.Rulesets.Mania.Difficulty.Skills
 
             // By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
             return individualStrain + overallStrain - CurrentStrain;
+        }
+
+        private double calcNotePriority(DifficultyHitObject m, double[] arr)
+            => Math.Max(1, Math.Max(1, 1 + Array.IndexOf(arr, startTimes[((ManiaDifficultyHitObject)m).BaseObject.Column]))
+                + (Math.Pow(((2 * Math.Tanh((m.DeltaTime - 40) / 12) + Math.Tanh((12 - m.DeltaTime) / 6) + 1) / 2) + 1, 2) - 2) / 2);
+
+
+        private double calcChordDelta(double[] arr, DifficultyHitObject m)
+        {
+            Array.Sort(arr);
+
+            double prevStartTime = -1;
+
+            foreach (double d in arr)
+            {
+                if (d > prevStartTime && d < m.StartTime) prevStartTime = d;
+
+                prevStartTime = prevStartTime < m.StartTime ? prevStartTime : m.StartTime;
+            }
+
+            return Math.Max(m.DeltaTime, m.StartTime - prevStartTime);
+        }
+
+        private double distOf(DifficultyHitObject m, int backwardsIndex, double col)
+        {
+            if (m == null) return 0;
+            if (m.Previous(backwardsIndex) == null) return 0;
+            if (m.StartTime - m.Previous(backwardsIndex).StartTime < 1) return 0; // Ignore chords
+            return Math.Abs(((ManiaDifficultyHitObject)m.Previous(backwardsIndex)).BaseObject.Column - col);
         }
 
         protected override double CalculateInitialStrain(double offset, DifficultyHitObject current)

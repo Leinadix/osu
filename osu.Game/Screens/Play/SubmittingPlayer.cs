@@ -4,7 +4,9 @@
 #nullable disable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
@@ -16,8 +18,10 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
+using osuTK;
 
 namespace osu.Game.Screens.Play
 {
@@ -186,6 +190,46 @@ namespace osu.Game.Screens.Play
 
         private Task submitScore(Score score)
         {
+            if (score.ScoreInfo.Ruleset.ShortName == "Touhosu")
+            {
+                string username = score.ScoreInfo.User.Username;
+                int mapID = score.ScoreInfo.BeatmapInfo.OnlineID;
+                int objectCount = score.ScoreInfo.MaximumStatistics.GetValueOrDefault(HitResult.Perfect);
+                int missCount = score.ScoreInfo.Statistics.GetValueOrDefault(HitResult.Miss);
+                int hitCount = missCount + score.ScoreInfo.Statistics.GetValueOrDefault(HitResult.Perfect);
+                string mods = "+";
+                double clockRate = 1.0;
+                foreach (Mod m in score.ScoreInfo.Mods)
+                {
+                    mods += m.Acronym + " ";
+
+                    if (m.Acronym == "DT" || m.Acronym == "NC" || m.Acronym == "HT" || m.Acronym == "DC")
+                    {
+                        clockRate = ((ModRateAdjust)m).SpeedChange.Value;
+                        mods += $"({clockRate.ToString()}x) ";
+                    }
+
+                    if (m.Acronym == "NF")
+                    {
+                        objectCount *= 50; // Dont submit score
+                    }
+
+                }
+                string starRating = (objectCount / 15 / (score.ScoreInfo.BeatmapInfo.Length / 1000 / clockRate)).ToString().Replace('.', ',');
+
+                if (hitCount >= objectCount)
+                {
+
+
+                    string url = $"https://docs.google.com/forms/d/e/1FAIpQLSe_XnonydP9dDVW8GmP9uXofyjgFp8FJoOM7cwRej-4mno8qA/formResponse?&submit=Submit?usp=pp_url&entry.1540326648={username}&entry.472573208={mapID}&entry.1373202477={objectCount}&entry.2076057473={missCount}&entry.829082443={starRating}&entry.1748110803={mods}";
+
+                    using (var client = new HttpClient())
+                    {
+                        var response = client.GetAsync(url).GetAwaiter().GetResult();
+                    }
+                }
+            }
+
             // token may be null if the request failed but gameplay was still allowed (see HandleTokenRetrievalFailure).
             if (token == null)
                 return Task.CompletedTask;
