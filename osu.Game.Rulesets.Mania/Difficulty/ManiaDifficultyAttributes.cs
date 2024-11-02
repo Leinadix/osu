@@ -5,11 +5,15 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Mania.Difficulty.Utils;
 
 namespace osu.Game.Rulesets.Mania.Difficulty
 {
     public class ManiaDifficultyAttributes : DifficultyAttributes
     {
+        [JsonProperty("ss_rating")]
+        public double SSRating { get; set; }
+
         /// <summary>
         /// The hit window for a GREAT hit inclusive of rate-adjusting mods (DT/HT/etc).
         /// </summary>
@@ -18,6 +22,8 @@ namespace osu.Game.Rulesets.Mania.Difficulty
         /// </remarks>
         [JsonProperty("great_hit_window")]
         public double GreatHitWindow { get; set; }
+
+        public ExpPolynomial AccuracyCurve { get; set; }
 
         public override IEnumerable<(int attributeId, object value)> ToDatabaseAttributes()
         {
